@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Bronco — Campaign Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;background:#f9f9f7;color:#111827}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:3px}
+button{font-family:inherit;cursor:pointer}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useRef } = React;
+
+// ── DATA ──────────────────────────────────────────────────────────────────────
+
+const CHART_DATA = [
+  { date:"Apr 20", impressions:210, spend:280, cpm:5.1, vcr:62, cpcv:0.8, purchases:18, leads:34 },
+  { date:"Apr 21", impressions:50,  spend:185, cpm:5.3, vcr:58, cpcv:0.9, purchases:9,  leads:21 },
+  { date:"Apr 22", impressions:200, spend:330, cpm:5.2, vcr:65, cpcv:0.7, purchases:22, leads:41 },
+  { date:"Apr 23", impressions:50,  spend:175, cpm:5.4, vcr:55, cpcv:1.0, purchases:8,  leads:18 },
+  { date:"Apr 24", impressions:100, spend:260, cpm:5.1, vcr:61, cpcv:0.8, purchases:14, leads:29 },
+  { date:"Apr 25", impressions:175, spend:320, cpm:5.3, vcr:63, cpcv:0.7, purchases:20, leads:38 },
+  { date:"Apr 26", impressions:380, spend:490, cpm:5.0, vcr:68, cpcv:0.6, purchases:35, leads:62 },
+];
+
+const METRICS = [
+  { key:"impressions", label:"Impressions", color:"#EC4899", fmt: v => v.toLocaleString() },
+  { key:"spend",       label:"Spent",       color:"#3B82F6", fmt: v => "$"+v              },
+  { key:"cpm",         label:"CPM",         color:"#8B5CF6", fmt: v => "$"+v              },
+  { key:"vcr",         label:"VCR",         color:"#B45309", fmt: v => v+"%"              },
+  { key:"cpcv",        label:"CPCV",        color:"#F97316", fmt: v => "$"+v              },
+  { key:"purchases",   label:"Purchases",   color:"#1D9E75", fmt: v => v                  },
+  { key:"leads",       label:"Leads",       color:"#6366f1", fmt: v => v                  },
+];
+
+const CAMPAIGNS = [
+  { id:1, advertiser:"Nike",    name:"Spring Awareness 2025", goal:"Awareness",  budget:50000, start:"Jan 15, 2025", end:"Mar 31, 2025", spend:48320, impressions:"9.23M",  cpm:"$5.23", purchases:1999, leads:3412, revenue:187450 },
+  { id:2, advertiser:"Adidas",  name:"Q3 Brand Push",         goal:"Awareness",  budget:75000, start:"Jul 1, 2025",  end:"Sep 30, 2025", spend:72100, impressions:"12.41M", cpm:"$5.81", purchases:1499, leads:5031, revenue:312600 },
+  { id:3, advertiser:"Samsung", name:"Holiday Conversion",    goal:"Conversion", budget:20000, start:"Nov 25, 2025", end:"Dec 31, 2025", spend:19480, impressions:"3.34M",  cpm:"$5.83", purchases:861,  leads:1094, revenue:98750  },
+  { id:4, advertiser:"Apple",   name:"New Arrivals Launch",   goal:"Reach",      budget:60000, start:"Mar 1, 2025",  end:"Apr 30, 2025", spend:56640, impressions:"10.85M", cpm:"$5.22", purchases:1673, leads:4218, revenue:243800 },
+  { id:5, advertiser:"Ford",    name:"East Coast Drive",      goal:"Awareness",  budget:45000, start:"May 1, 2025",  end:"Jun 30, 2025", spend:43800, impressions:"8.10M",  cpm:"$5.41", purchases:1200, leads:3300, revenue:204100 },
+];
+
+const STRATEGIES = [
+  { id:1,  campaign:"Spring Awareness 2025", name:"Broad Match Prospecting",  goal:"Awareness",  spend:8200,  impressions:"1.57M", cpm:"$5.22", purchases:340, leads:612,  revenue:31200 },
+  { id:2,  campaign:"Spring Awareness 2025", name:"CTV Upper Funnel",         goal:"Reach",      spend:11400, impressions:"2.18M", cpm:"$5.23", purchases:420, leads:801,  revenue:38900 },
+  { id:3,  campaign:"Spring Awareness 2025", name:"Lookalike Tier 1",         goal:"Awareness",  spend:9800,  impressions:"1.88M", cpm:"$5.21", purchases:388, leads:700,  revenue:35400 },
+  { id:4,  campaign:"Spring Awareness 2025", name:"Display Awareness Burst",  goal:"Awareness",  spend:7620,  impressions:"1.46M", cpm:"$5.22", purchases:301, leads:542,  revenue:27300 },
+  { id:5,  campaign:"Spring Awareness 2025", name:"Daypart Morning Drive",    goal:"Awareness",  spend:5100,  impressions:"0.98M", cpm:"$5.20", purchases:210, leads:380,  revenue:19050 },
+  { id:6,  campaign:"Spring Awareness 2025", name:"Retarget Warm Audience",   goal:"Conversion", spend:6200,  impressions:"1.16M", cpm:"$5.34", purchases:340, leads:377,  revenue:35600 },
+  { id:7,  campaign:"Q3 Brand Push",         name:"Pre-Roll Video 30s",       goal:"Awareness",  spend:14200, impressions:"2.44M", cpm:"$5.82", purchases:295, leads:990,  revenue:61400 },
+  { id:8,  campaign:"Q3 Brand Push",         name:"Competitor Conquesting",   goal:"Conversion", spend:18900, impressions:"3.25M", cpm:"$5.82", purchases:392, leads:1320, revenue:81700 },
+  { id:9,  campaign:"Q3 Brand Push",         name:"Geo Fence Retail Zones",   goal:"Reach",      spend:21100, impressions:"3.63M", cpm:"$5.81", purchases:438, leads:1476, revenue:91400 },
+  { id:10, campaign:"Q3 Brand Push",         name:"Lookalike Tier 2",         goal:"Awareness",  spend:17900, impressions:"3.08M", cpm:"$5.81", purchases:374, leads:1245, revenue:78100 },
+  { id:11, campaign:"Holiday Conversion",    name:"Cart Abandoners Retarget", goal:"Conversion", spend:5200,  impressions:"0.89M", cpm:"$5.84", purchases:230, leads:292,  revenue:26300 },
+  { id:12, campaign:"Holiday Conversion",    name:"Site Visitors 7-Day",      goal:"Conversion", spend:6100,  impressions:"1.05M", cpm:"$5.81", purchases:270, leads:342,  revenue:30800 },
+  { id:13, campaign:"New Arrivals Launch",   name:"CTV Mid Funnel",           goal:"Reach",      spend:15200, impressions:"2.91M", cpm:"$5.22", purchases:449, leads:1132, revenue:65400 },
+  { id:14, campaign:"New Arrivals Launch",   name:"Pre-Roll Video 15s",       goal:"Awareness",  spend:14100, impressions:"2.70M", cpm:"$5.22", purchases:416, leads:1050, revenue:60700 },
+  { id:15, campaign:"East Coast Drive",      name:"Geo Fence Competitors",    goal:"Awareness",  spend:10800, impressions:"2.00M", cpm:"$5.40", purchases:296, leads:815,  revenue:50400 },
+  { id:16, campaign:"East Coast Drive",      name:"In-Market Auto Intenders", goal:"Conversion", spend:11200, impressions:"2.07M", cpm:"$5.41", purchases:307, leads:845,  revenue:52200 },
+  { id:17, campaign:"East Coast Drive",      name:"Life Events — New Mover",  goal:"Conversion", spend:10900, impressions:"2.02M", cpm:"$5.40", purchases:299, leads:823,  revenue:50900 },
+  { id:18, campaign:"East Coast Drive",      name:"Cord Cutters CTV",         goal:"Reach",      spend:10900, impressions:"2.01M", cpm:"$5.42", purchases:298, leads:817,  revenue:50600 },
+];
+
+const CREATIVES = [
+  { id:1,  campaign:"Spring Awareness 2025", strategy:"Broad Match Prospecting",  name:"Spring_Banner_v1",     format:"Display 300x250",   spend:2700, impressions:"517K",  cpm:"$5.22", hhFreq:"3.1x" },
+  { id:2,  campaign:"Spring Awareness 2025", strategy:"Broad Match Prospecting",  name:"Spring_Banner_v2",     format:"Display 728x90",    spend:2900, impressions:"556K",  cpm:"$5.22", hhFreq:"3.3x" },
+  { id:3,  campaign:"Spring Awareness 2025", strategy:"CTV Upper Funnel",         name:"Spring_CTV_30s_v1",    format:"CTV 1920x1080",     spend:5800, impressions:"1.11M", cpm:"$5.23", hhFreq:"3.5x" },
+  { id:4,  campaign:"Spring Awareness 2025", strategy:"CTV Upper Funnel",         name:"Spring_CTV_15s_v1",    format:"CTV 1920x1080",     spend:5600, impressions:"1.07M", cpm:"$5.23", hhFreq:"3.7x" },
+  { id:5,  campaign:"Spring Awareness 2025", strategy:"Lookalike Tier 1",         name:"Spring_Native_v1",     format:"Native 600x500",    spend:4900, impressions:"0.94M", cpm:"$5.21", hhFreq:"3.2x" },
+  { id:6,  campaign:"Q3 Brand Push",         strategy:"Pre-Roll Video 30s",       name:"Q3_Video_30s_v1",      format:"Pre-Roll 1280x720", spend:7100, impressions:"1.22M", cpm:"$5.82", hhFreq:"3.5x" },
+  { id:7,  campaign:"Q3 Brand Push",         strategy:"Pre-Roll Video 30s",       name:"Q3_Video_30s_v2",      format:"Pre-Roll 1280x720", spend:7100, impressions:"1.22M", cpm:"$5.82", hhFreq:"3.7x" },
+  { id:8,  campaign:"Q3 Brand Push",         strategy:"Competitor Conquesting",   name:"Q3_Conquest_v1",       format:"Display 300x250",   spend:6300, impressions:"1.08M", cpm:"$5.83", hhFreq:"3.6x" },
+  { id:9,  campaign:"Q3 Brand Push",         strategy:"Competitor Conquesting",   name:"Q3_Conquest_v2",       format:"Display 728x90",    spend:6300, impressions:"1.08M", cpm:"$5.83", hhFreq:"3.8x" },
+  { id:10, campaign:"Holiday Conversion",    strategy:"Cart Abandoners Retarget", name:"Holiday_Static_v1",    format:"Display 300x250",   spend:1740, impressions:"0.30M", cpm:"$5.80", hhFreq:"2.8x" },
+  { id:11, campaign:"Holiday Conversion",    strategy:"Cart Abandoners Retarget", name:"Holiday_Static_v2",    format:"Display 728x90",    spend:1730, impressions:"0.30M", cpm:"$5.77", hhFreq:"3.0x" },
+  { id:12, campaign:"East Coast Drive",      strategy:"Geo Fence Competitors",    name:"EastCoast_Video_v1",   format:"Pre-Roll 1280x720", spend:5400, impressions:"1.00M", cpm:"$5.40", hhFreq:"3.4x" },
+  { id:13, campaign:"East Coast Drive",      strategy:"Geo Fence Competitors",    name:"EastCoast_Display_v1", format:"Display 300x250",   spend:5400, impressions:"1.00M", cpm:"$5.40", hhFreq:"3.4x" },
+];
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+
+const GOAL_STYLE = {
+  Awareness:  { bg:"rgba(59,130,246,0.10)",  color:"#3B82F6" },
+  Conversion: { bg:"rgba(29,158,117,0.12)",  color:"#1D9E75" },
+  Reach:      { bg:"rgba(139,92,246,0.10)",  color:"#8B5CF6" },
+};
+const f$ = v => "$" + Number(v).toLocaleString();
+
+function Badge({ goal }) {
+  const s = GOAL_STYLE[goal] || {};
+  return <span style={{ fontSize:10.5, fontWeight:600, padding:"2px 8px", borderRadius:4, background:s.bg, color:s.color, whiteSpace:"nowrap" }}>{goal}</span>;
+}
+
+function useSort(def) {
+  const [sort, setSort] = useState({ col:def, dir:1 });
+  const onSort = col => setSort(s => s.col===col ? { col, dir:s.dir*-1 } : { col, dir:1 });
+  const sortRows = rows => [...rows].sort((a,b) => { const va=a[sort.col],vb=b[sort.col]; return va<vb?-sort.dir:va>vb?sort.dir:0; });
+  return { sort, onSort, sortRows };
+}
+
+function Th({ label, col, sort, onSort, align="right" }) {
+  const active = sort.col === col;
+  return (
+    <th onClick={() => onSort(col)} style={{ padding:"9px 14px", textAlign:align, fontSize:10, fontWeight:700, letterSpacing:"0.07em", textTransform:"uppercase", color:active?"#111827":"#6b7280", whiteSpace:"nowrap", cursor:"pointer", userSelect:"none", background:"#f5f5f1", position:"sticky", top:0, zIndex:1, borderBottom:"1px solid #e5e5e0" }}>
+      {label} <span style={{ opacity:active?1:.3, fontSize:9 }}>{active?(sort.dir===1?"↓":"↑"):"↕"}</span>
+    </th>
+  );
+}
+
+function Td({ children, align="right", muted, mono }) {
+  return <td style={{ padding:"9px 14px", textAlign:align, whiteSpace:"nowrap", color:muted?"#6b7280":"#111827", fontFamily:mono?"monospace":"inherit", fontSize:mono?11:13, fontVariantNumeric:"tabular-nums" }}>{children}</td>;
+}
+
+function TRow({ children }) {
+  return <tr style={{ borderTop:"1px solid #f0f0eb", transition:"background .1s" }} onMouseEnter={e=>e.currentTarget.style.background="#f9f9f5"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>{children}</tr>;
+}
+
+function TableShell({ children }) {
+  return <div style={{ border:"1px solid #e5e5e0", borderRadius:8, overflow:"auto", maxHeight:380, boxShadow:"0 1px 3px rgba(0,0,0,0.05)" }}><table style={{ borderCollapse:"collapse", width:"100%", minWidth:900 }}>{children}</table></div>;
+}
+
+function TableHeader({ title, count }) {
+  return (
+    <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
+      <span style={{ fontSize:10, fontWeight:700, letterSpacing:"0.09em", textTransform:"uppercase", color:"#6b7280" }}>{title}</span>
+      <span style={{ fontSize:11, color:"#9ca3af", background:"#f5f5f1", padding:"2px 9px", borderRadius:20, border:"1px solid #e5e5e0" }}>{count} rows</span>
+    </div>
+  );
+}
+
+// ── SVG LINE CHART ────────────────────────────────────────────────────────────
+
+function SvgChart({ data, metrics }) {
+  const [tooltip, setTooltip] = useState(null);
+  const W = 900, H = 220, PL = 48, PR = 20, PT = 12, PB = 32;
+  const chartW = W - PL - PR;
+  const chartH = H - PT - PB;
+
+  if (!metrics.length) return (
+    <div style={{ height:H, display:"flex", alignItems:"center", justifyContent:"center", color:"#9ca3af", fontSize:12 }}>
+      Select at least one metric above
+    </div>
+  );
+
+  // gather all values for scale
+  const allVals = metrics.flatMap(m => data.map(d => d[m.key]));
+  const minVal = 0;
+  const maxVal = Math.max(...allVals) * 1.1;
+  const scaleY = v => PT + chartH - ((v - minVal) / (maxVal - minVal)) * chartH;
+  const scaleX = i => PL + (i / (data.length - 1)) * chartW;
+
+  // Y axis ticks
+  const yTicks = 5;
+  const yTickVals = Array.from({ length: yTicks + 1 }, (_, i) => Math.round(minVal + (maxVal - minVal) * i / yTicks));
+
+  const pointsFor = m => data.map((d, i) => ({ x: scaleX(i), y: scaleY(d[m.key]), val: d[m.key] }));
+  const polyline = pts => pts.map(p => `${p.x},${p.y}`).join(" ");
+
+  // smooth path
+  const smoothPath = pts => {
+    if (pts.length < 2) return "";
+    let d = `M ${pts[0].x} ${pts[0].y}`;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const cx = (pts[i].x + pts[i+1].x) / 2;
+      d += ` C ${cx} ${pts[i].y}, ${cx} ${pts[i+1].y}, ${pts[i+1].x} ${pts[i+1].y}`;
+    }
+    return d;
+  };
+
+  return (
+    <div style={{ position:"relative" }}>
+      <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ overflow:"visible", display:"block" }}>
+        {/* Grid lines */}
+        {yTickVals.map((v,i) => (
+          <g key={i}>
+            <line x1={PL} y1={scaleY(v)} x2={W-PR} y2={scaleY(v)} stroke="#f0f0eb" strokeWidth="1"/>
+            <text x={PL-8} y={scaleY(v)+4} textAnchor="end" fontSize="10" fill="#9ca3af">{v}</text>
+          </g>
+        ))}
+
+        {/* X axis line */}
+        <line x1={PL} y1={H-PB} x2={W-PR} y2={H-PB} stroke="#e5e5e0" strokeWidth="1"/>
+        {/* Y axis line */}
+        <line x1={PL} y1={PT} x2={PL} y2={H-PB} stroke="#e5e5e0" strokeWidth="1"/>
+
+        {/* X axis labels */}
+        {data.map((d, i) => (
+          <text key={i} x={scaleX(i)} y={H-PB+18} textAnchor="middle" fontSize="10" fill="#9ca3af">{d.date}</text>
+        ))}
+
+        {/* Lines */}
+        {metrics.map(m => {
+          const pts = pointsFor(m);
+          return (
+            <g key={m.key}>
+              <path d={smoothPath(pts)} fill="none" stroke={m.color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+              {pts.map((p, i) => (
+                <circle key={i} cx={p.x} cy={p.y} r="3.5" fill={m.color} stroke="#fff" strokeWidth="1.5"/>
+              ))}
+            </g>
+          );
+        })}
+
+        {/* Hover zones */}
+        {data.map((d, i) => (
+          <rect key={i}
+            x={scaleX(i) - chartW/(data.length-1)/2}
+            y={PT} width={chartW/(data.length-1)} height={chartH}
+            fill="transparent"
+            onMouseEnter={() => setTooltip({ i, x: scaleX(i), d })}
+            onMouseLeave={() => setTooltip(null)}
+          />
+        ))}
+
+        {/* Vertical crosshair */}
+        {tooltip && (
+          <line x1={scaleX(tooltip.i)} y1={PT} x2={scaleX(tooltip.i)} y2={H-PB} stroke="#d1d5db" strokeWidth="1" strokeDasharray="4 3"/>
+        )}
+      </svg>
+
+      {/* Tooltip */}
+      {tooltip && (
+        <div style={{ position:"absolute", top:0, left: Math.min(scaleX(tooltip.i)/W*100, 70)+"%", background:"#fff", border:"1px solid #e5e5e0", borderRadius:8, padding:"10px 14px", boxShadow:"0 4px 20px rgba(0,0,0,0.10)", fontSize:12, pointerEvents:"none", zIndex:10, minWidth:140 }}>
+          <div style={{ fontWeight:700, color:"#374151", marginBottom:8, fontSize:11, textTransform:"uppercase", letterSpacing:"0.04em" }}>{tooltip.d.date}</div>
+          {metrics.map(m => (
+            <div key={m.key} style={{ display:"flex", alignItems:"center", gap:8, marginBottom:3 }}>
+              <div style={{ width:8, height:8, borderRadius:"50%", background:m.color, flexShrink:0 }}/>
+              <span style={{ color:"#9ca3af", flex:1 }}>{m.label}</span>
+              <span style={{ fontWeight:600, color:"#111827", fontVariantNumeric:"tabular-nums" }}>{m.fmt(tooltip.d[m.key])}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── CAMPAIGN CHART WRAPPER ────────────────────────────────────────────────────
+
+function CampaignChart({ activeMetrics, onToggle }) {
+  const visible = METRICS.filter(m => activeMetrics.includes(m.key));
+  const totals = Object.fromEntries(METRICS.map(m => [m.key, CHART_DATA.reduce((s,d)=>s+d[m.key],0)]));
+
+  return (
+    <div style={{ background:"#fff", border:"1px solid #e5e5e0", borderRadius:10, padding:"20px 24px 16px", marginBottom:24, boxShadow:"0 1px 4px rgba(0,0,0,0.05)" }}>
+      {/* Toggles */}
+      <div style={{ display:"flex", gap:20, flexWrap:"wrap", paddingBottom:16, marginBottom:16, borderBottom:"1px solid #f0f0eb" }}>
+        {METRICS.map(m => {
+          const on = activeMetrics.includes(m.key);
+          return (
+            <button key={m.key} onClick={() => onToggle(m.key)} style={{ background:"none", border:"none", padding:0, textAlign:"left", opacity:on?1:0.38, transition:"opacity .15s" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:5, marginBottom:3 }}>
+                <div style={{ width:13, height:13, borderRadius:3, border:`2px solid ${m.color}`, background:on?m.color:"transparent", transition:"background .15s" }}/>
+                <span style={{ fontSize:12, fontWeight:600, color:"#374151" }}>{m.label}</span>
+              </div>
+              <div style={{ display:"flex", alignItems:"center", gap:5, paddingLeft:18 }}>
+                <svg width="18" height="3"><line x1="0" y1="1.5" x2="18" y2="1.5" stroke={m.color} strokeWidth="2"/></svg>
+                <span style={{ fontSize:11, color:"#9ca3af", fontVariantNumeric:"tabular-nums" }}>{m.fmt(totals[m.key])}</span>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+      <SvgChart data={CHART_DATA} metrics={visible}/>
+    </div>
+  );
+}
+
+// ── TABLES ────────────────────────────────────────────────────────────────────
+
+function CampaignsTable() {
+  const { sort, onSort, sortRows } = useSort("name");
+  const [showChart, setShowChart] = useState(true);
+  const [activeMetrics, setActiveMetrics] = useState(["impressions","spend"]);
+  const toggleMetric = key => setActiveMetrics(p => p.includes(key)?p.filter(k=>k!==key):[...p,key]);
+  const T = ({l,c,a}) => <Th label={l} col={c} sort={sort} onSort={onSort} align={a||"right"}/>;
+  return (
+    <>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
+        <h1 style={{ fontSize:22, fontWeight:700, color:"#111827", letterSpacing:"-0.4px" }}>Campaigns</h1>
+        <div style={{ display:"flex", gap:8 }}>
+          <button onClick={()=>setShowChart(v=>!v)} style={{ display:"flex", alignItems:"center", gap:6, padding:"7px 13px", borderRadius:7, border:"1px solid #d1d5db", background:"#fff", fontSize:12, fontWeight:500, color:"#374151" }}>
+            {showChart ? "Hide chart" : "Show chart"}
+          </button>
+          <button style={{ padding:"7px 16px", borderRadius:7, border:"none", background:"#4F7942", fontSize:13, fontWeight:600, color:"#fff" }}>+ Create campaign</button>
+        </div>
+      </div>
+      {showChart && <CampaignChart activeMetrics={activeMetrics} onToggle={toggleMetric}/>}
+      <TableHeader title="Campaigns" count={CAMPAIGNS.length}/>
+      <TableShell>
+        <thead><tr>
+          <T l="Advertiser" c="advertiser" a="left"/><T l="Campaign" c="name" a="left"/><T l="Goal" c="goal" a="left"/>
+          <T l="Budget" c="budget"/><T l="Start" c="start" a="left"/><T l="End" c="end" a="left"/>
+          <T l="Spend" c="spend"/><T l="Impressions" c="impressions"/><T l="CPM" c="cpm"/>
+          <T l="Purchases" c="purchases"/><T l="Leads" c="leads"/><T l="Revenue" c="revenue"/>
+        </tr></thead>
+        <tbody>
+          {sortRows(CAMPAIGNS).map(r=>(
+            <TRow key={r.id}>
+              <Td align="left" muted>{r.advertiser}</Td>
+              <td style={{ padding:"9px 14px", fontWeight:600, whiteSpace:"nowrap", color:"#111827" }}>{r.name}</td>
+              <td style={{ padding:"9px 14px" }}><Badge goal={r.goal}/></td>
+              <Td>{f$(r.budget)}</Td><Td align="left" muted>{r.start}</Td><Td align="left" muted>{r.end}</Td>
+              <Td>{f$(r.spend)}</Td><Td>{r.impressions}</Td><Td>{r.cpm}</Td>
+              <Td>{r.purchases.toLocaleString()}</Td><Td>{r.leads.toLocaleString()}</Td><Td>{f$(r.revenue)}</Td>
+            </TRow>
+          ))}
+        </tbody>
+      </TableShell>
+    </>
+  );
+}
+
+function StrategiesTable() {
+  const { sort, onSort, sortRows } = useSort("name");
+  const T = ({l,c,a}) => <Th label={l} col={c} sort={sort} onSort={onSort} align={a||"right"}/>;
+  return (
+    <>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
+        <h1 style={{ fontSize:22, fontWeight:700, color:"#111827", letterSpacing:"-0.4px" }}>Strategies</h1>
+        <button style={{ padding:"7px 16px", borderRadius:7, border:"none", background:"#4F7942", fontSize:13, fontWeight:600, color:"#fff" }}>+ Create strategy</button>
+      </div>
+      <TableHeader title="Strategies" count={STRATEGIES.length}/>
+      <TableShell>
+        <thead><tr>
+          <T l="Campaign" c="campaign" a="left"/><T l="Strategy" c="name" a="left"/><T l="Goal" c="goal" a="left"/>
+          <T l="Spend" c="spend"/><T l="Impressions" c="impressions"/><T l="CPM" c="cpm"/>
+          <T l="Purchases" c="purchases"/><T l="Leads" c="leads"/><T l="Revenue" c="revenue"/>
+        </tr></thead>
+        <tbody>
+          {sortRows(STRATEGIES).map(r=>(
+            <TRow key={r.id}>
+              <Td align="left" muted>{r.campaign}</Td>
+              <td style={{ padding:"9px 14px", fontWeight:600, whiteSpace:"nowrap", color:"#111827" }}>{r.name}</td>
+              <td style={{ padding:"9px 14px" }}><Badge goal={r.goal}/></td>
+              <Td>{f$(r.spend)}</Td><Td>{r.impressions}</Td><Td>{r.cpm}</Td>
+              <Td>{r.purchases}</Td><Td>{r.leads}</Td><Td>{f$(r.revenue)}</Td>
+            </TRow>
+          ))}
+        </tbody>
+      </TableShell>
+    </>
+  );
+}
+
+function CreativesTable() {
+  const { sort, onSort, sortRows } = useSort("name");
+  const T = ({l,c,a}) => <Th label={l} col={c} sort={sort} onSort={onSort} align={a||"right"}/>;
+  return (
+    <>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
+        <h1 style={{ fontSize:22, fontWeight:700, color:"#111827", letterSpacing:"-0.4px" }}>Creatives</h1>
+        <button style={{ padding:"7px 16px", borderRadius:7, border:"none", background:"#4F7942", fontSize:13, fontWeight:600, color:"#fff" }}>+ Upload creative</button>
+      </div>
+      <TableHeader title="Creatives" count={CREATIVES.length}/>
+      <TableShell>
+        <thead><tr>
+          <T l="Campaign" c="campaign" a="left"/><T l="Strategy" c="strategy" a="left"/>
+          <T l="Creative" c="name" a="left"/><T l="Format" c="format" a="left"/>
+          <T l="Spend" c="spend"/><T l="Impressions" c="impressions"/><T l="CPM" c="cpm"/><T l="HH Freq" c="hhFreq"/>
+        </tr></thead>
+        <tbody>
+          {sortRows(CREATIVES).map(r=>(
+            <TRow key={r.id}>
+              <Td align="left" muted>{r.campaign}</Td><Td align="left" muted>{r.strategy}</Td>
+              <td style={{ padding:"9px 14px", fontFamily:"monospace", fontSize:11, fontWeight:600, whiteSpace:"nowrap", color:"#111827" }}>{r.name}</td>
+              <Td align="left" muted>{r.format}</Td>
+              <Td>{f$(r.spend)}</Td><Td>{r.impressions}</Td><Td>{r.cpm}</Td><Td>{r.hhFreq}</Td>
+            </TRow>
+          ))}
+        </tbody>
+      </TableShell>
+    </>
+  );
+}
+
+// ── APP ───────────────────────────────────────────────────────────────────────
+
+const NAV = [
+  { id:"campaigns",  label:"Campaigns",  icon:"📢" },
+  { id:"strategies", label:"Strategies", icon:"🎯" },
+  { id:"creatives",  label:"Creatives",  icon:"🎬" },
+];
+
+function App() {
+  const [active, setActive] = useState("campaigns");
+  return (
+    <div style={{ display:"flex", minHeight:"100vh", background:"#f9f9f7" }}>
+      <div style={{ width:220, flexShrink:0, background:"#eeeee8", borderRight:"1px solid #e0e0d8", padding:"20px 12px", display:"flex", flexDirection:"column", gap:2 }}>
+        <div style={{ fontFamily:"Georgia,serif", fontSize:28, fontWeight:700, color:"#4F7942", textAlign:"center", marginBottom:24, letterSpacing:"-0.5px" }}>Bronco</div>
+        <div style={{ fontSize:9.5, fontWeight:700, letterSpacing:"0.09em", textTransform:"uppercase", color:"#9ca3af", padding:"0 10px", marginBottom:6 }}>Advertising</div>
+        {NAV.map(item => {
+          const on = active===item.id;
+          return (
+            <button key={item.id} onClick={()=>setActive(item.id)}
+              style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 12px", borderRadius:8, border:"none", background:on?"rgba(79,121,66,0.13)":"transparent", width:"100%", textAlign:"left", transition:"background .12s" }}
+              onMouseEnter={e=>{ if(!on) e.currentTarget.style.background="rgba(0,0,0,0.05)"; }}
+              onMouseLeave={e=>{ if(!on) e.currentTarget.style.background="transparent"; }}>
+              <span style={{ fontSize:15 }}>{item.icon}</span>
+              <span style={{ fontSize:13, fontWeight:on?600:400, color:on?"#4F7942":"#374151" }}>{item.label}</span>
+              {on && <div style={{ marginLeft:"auto", width:5, height:5, borderRadius:"50%", background:"#4F7942" }}/>}
+            </button>
+          );
+        })}
+        <div style={{ marginTop:16, borderTop:"1px solid #d9d9d0", paddingTop:14 }}>
+          <div style={{ fontSize:9.5, fontWeight:700, letterSpacing:"0.09em", textTransform:"uppercase", color:"#9ca3af", padding:"0 10px", marginBottom:6 }}>Other</div>
+          {[{label:"Dashboard",icon:"▦"},{label:"Settings",icon:"⚙️"}].map(item=>(
+            <button key={item.label} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 12px", borderRadius:8, border:"none", background:"transparent", width:"100%", textAlign:"left", color:"#374151", fontSize:13 }}
+              onMouseEnter={e=>e.currentTarget.style.background="rgba(0,0,0,0.05)"}
+              onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+              <span>{item.icon}</span>{item.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div style={{ flex:1, padding:"28px 32px", overflow:"auto" }}>
+        {active==="campaigns"  && <CampaignsTable/>}
+        {active==="strategies" && <StrategiesTable/>}
+        {active==="creatives"  && <CreativesTable/>}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
